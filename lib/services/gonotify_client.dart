@@ -47,6 +47,13 @@ class GonotifyClient {
       debugPrint('[NotifyApp] Connecting to $uri...');
       _channel = WebSocketChannel.connect(uri);
 
+      // Immediately transition status to Connected once WebSocket handshake completes
+      _channel!.ready.then((_) {
+        _setStatus(ConnectionStatus.connected);
+      }).catchError((err) {
+        debugPrint('[NotifyApp] Handshake error: $err');
+      });
+
       _subscription = _channel!.stream.listen(
         (data) {
           _setStatus(ConnectionStatus.connected);
