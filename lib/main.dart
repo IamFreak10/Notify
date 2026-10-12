@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'models/notification_model.dart';
 import 'services/gonotify_client.dart';
 
@@ -46,10 +48,12 @@ class NotificationHomeScreen extends StatefulWidget {
 
 class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
   final List<NotificationModel> _notifications = [];
+  final AudioPlayer _audioPlayer = AudioPlayer();
   GonotifyClient? _client;
   ConnectionStatus _status = ConnectionStatus.disconnected;
-  String _serverUrl = 'wss://your-gonotify-app.onrender.com/ws';
+  String _serverUrl = 'ws://localhost:8080/ws';
   String _selectedFilter = 'all';
+  bool _soundEnabled = true;
 
   @override
   void initState() {
@@ -61,6 +65,7 @@ class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _serverUrl = prefs.getString('server_url') ?? _serverUrl;
+      _soundEnabled = prefs.getBool('sound_enabled') ?? true;
     });
 
     _client = GonotifyClient(
@@ -74,11 +79,30 @@ class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
         setState(() {
           _notifications.insert(0, notification);
         });
+
+        // Play loud, crisp notification chime
+        if (_soundEnabled) {
+          _playSound();
+        }
+
+        // Haptic feedback (vibrate on mobile)
+        HapticFeedback.vibrate();
+
         _showInAppSnackbar(notification);
       },
     );
 
     _client?.connect();
+  }
+
+  Future<void> _playSound() async {
+    try {
+      await _audioPlayer.stop();
+      await _audioPlayer.play(AssetSource('sounds/order_chime.wav'));
+    } catch (e) {
+      // Fallback to system alert sound if audio output fails
+      SystemSound.play(SystemSoundType.alert);
+    }
   }
 
   void _showInAppSnackbar(NotificationModel n) {
@@ -117,7 +141,7 @@ class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Enter your Gonotify WebSocket URL (e.g. Render URL or local Wi-Fi IP):',
+              'Enter your Gonotify WebSocket URL (e.g. Render URL or local IP):',
               style: TextStyle(fontSize: 13, color: Colors.grey),
             ),
             const SizedBox(height: 12),
@@ -125,7 +149,7 @@ class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
               controller: controller,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'ws://192.168.0.x:8080/ws',
+                hintText: 'ws://localhost:8080/ws',
                 prefixIcon: Icon(Icons.link),
               ),
             ),
@@ -210,6 +234,7 @@ class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
   @override
   void dispose() {
     _client?.disconnect();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -231,6 +256,21 @@ class _NotificationHomeScreenState extends State<NotificationHomeScreen> {
           ],
         ),
         actions: [
+          // Sound Mute/Unmute Toggle
+          IconButton(
+            tooltip: _soundEnabled ? 'Mute Sound' : 'Enable Sound',
+            icon: Icon(
+              _soundEnabled ? Icons.volume_up : Icons.volume_off,
+              color: _soundEnabled ? const Color(0xFF10B981) : Colors.grey,
+            ),
+            onPressed: () async {
+              final val = !_soundEnabled;
+              setState(() => _soundEnabled = val);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('sound_enabled', val);
+              if (val) _playSound(); // quick preview on unmute
+            },
+          ),
           _buildConnectionChip(),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
