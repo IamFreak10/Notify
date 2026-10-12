@@ -1,0 +1,4 @@
+github.com/IamFreak10/Gonotify v0.0.0-20261012212138-e028baa207b7 h1:OXKfWp6gxbFsNmxdS3oCZvO+dsguj94ucS1pi5DnvBo=
+github.com/IamFreak10/Gonotify v0.0.0-20261012212138-e028baa207b7/go.mod h1:SlEB2MCh9i5m6CpWqM/vnzcWsmQRbaopKEdPzs/IQ7E=
+github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
+github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
